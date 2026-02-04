@@ -273,7 +273,7 @@ func (v *VoiceConnection) waitUntilConnected() error {
 			return nil
 		}
 
-		if i > 10 {
+		if i > 20 {
 			return fmt.Errorf("timeout waiting for voice")
 		}
 
