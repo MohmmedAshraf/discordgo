@@ -970,21 +970,22 @@ func (v *VoiceConnection) reconnect() {
 	// Close any currently open connections
 	v.Close()
 
+	maxRetries := 5
 	wait := time.Duration(1)
-	for {
+	for attempt := 1; attempt <= maxRetries; attempt++ {
 
 		<-time.After(wait * time.Second)
 		wait *= 2
-		if wait > 600 {
-			wait = 600
+		if wait > 32 {
+			wait = 32
 		}
 
 		if v.session.DataReady == false || v.session.wsConn == nil {
-			v.log(LogInformational, "cannot reconnect to channel %s with unready session", v.ChannelID)
+			v.log(LogInformational, "cannot reconnect to channel %s with unready session (attempt %d/%d)", v.ChannelID, attempt, maxRetries)
 			continue
 		}
 
-		v.log(LogInformational, "trying to reconnect to channel %s", v.ChannelID)
+		v.log(LogInformational, "trying to reconnect to channel %s (attempt %d/%d)", v.ChannelID, attempt, maxRetries)
 
 		_, err := v.session.ChannelVoiceJoin(v.GuildID, v.ChannelID, v.mute, v.deaf)
 		if err == nil {
@@ -1008,4 +1009,12 @@ func (v *VoiceConnection) reconnect() {
 		v.session.wsMutex.Unlock()
 
 	}
+
+	v.log(LogError, "giving up reconnecting to channel %s after %d attempts", v.ChannelID, maxRetries)
+
+	// Clean up so the session doesn't hold a stale voice connection
+	v.Close()
+	v.session.Lock()
+	delete(v.session.VoiceConnections, v.GuildID)
+	v.session.Unlock()
 }
