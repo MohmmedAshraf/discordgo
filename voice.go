@@ -362,7 +362,7 @@ func (v *VoiceConnection) wsListen(wsConn *websocket.Conn, close <-chan struct{}
 	v.log(LogInformational, "called")
 
 	for {
-		_, message, err := v.wsConn.ReadMessage()
+		_, message, err := wsConn.ReadMessage()
 		if err != nil {
 			// 4014 indicates a manual disconnection by someone in the guild;
 			// we shouldn't reconnect.
