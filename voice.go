@@ -971,6 +971,8 @@ func (v *VoiceConnection) reconnect() {
 	v.Close()
 
 	maxRetries := 5
+	maxGatewayWait := 5 * time.Minute // Don't wait forever for gateway
+	gatewayWaitStart := time.Now()
 	wait := time.Duration(1)
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 
@@ -981,7 +983,12 @@ func (v *VoiceConnection) reconnect() {
 		}
 
 		if v.session.DataReady == false || v.session.wsConn == nil {
-			v.log(LogInformational, "cannot reconnect to channel %s with unready session (attempt %d/%d)", v.ChannelID, attempt, maxRetries)
+			if time.Since(gatewayWaitStart) > maxGatewayWait {
+				v.log(LogError, "gateway not ready after %v, giving up reconnecting to channel %s", maxGatewayWait, v.ChannelID)
+				break
+			}
+			v.log(LogInformational, "waiting for gateway to reconnect before voice rejoin to channel %s (attempt %d not counted)", v.ChannelID, attempt)
+			attempt-- // Don't burn the attempt — gateway isn't ready yet
 			continue
 		}
 
